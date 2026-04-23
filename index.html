@@ -1310,6 +1310,8 @@
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let fullReply = "", buffer = "";
+            let cardData = null;  // 新增：存储卡片数据
+
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
@@ -1323,22 +1325,43 @@
                         if (jsonStr === '[DONE]') continue;
                         try {
                             const eventData = JSON.parse(jsonStr);
-                            if (eventData.type === "answer" && eventData.content) fullReply = eventData.content;
+                            if (eventData.type === "answer" && eventData.content) {
+                                fullReply = eventData.content;
+                            }
+                            // 检测卡片数据：有两种可能的格式
+                            // 1. eventData.type === "card" 且 eventData.data
+                            // 2. eventData.card_type !== undefined
+                            if (eventData.type === "card" && eventData.data) {
+                                cardData = eventData;
+                            } else if (eventData.card_type !== undefined) {
+                                cardData = eventData;
+                            }
                         } catch (e) {}
                     }
                 }
             }
+
+            // 移除“思考”气泡
             const thinkElem = document.getElementById(thinkingId);
             if (thinkElem) thinkElem.remove();
+
+            // 清洗 Markdown 函数（保持原样）
             function cleanMarkdown(text) {
                 if (!text) return text;
                 return text.replace(/^>\s*/gm, '').replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1').replace(/`(.*?)`/g, '$1').replace(/\n{3,}/g, '\n\n').trim();
             }
-            const cleanedReply = cleanMarkdown(fullReply);
-            if (cleanedReply) addMessage(cleanedReply, false);
-            else addMessage("小暖暂时无法回答，请稍后再试～", false);
+
+            // 【核心改动】如果有卡片数据，渲染卡片；否则显示普通文本
+            if (cardData) {
+                renderCard(cardData);
+            } else if (fullReply) {
+                const cleanedReply = cleanMarkdown(fullReply);
+                addMessage(cleanedReply, false);
+            } else {
+                addMessage("小暖暂时无法回答，请稍后再试～", false);
+            }
             chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
-            return cleanedReply;
+            return fullReply;
         } catch (error) {
             console.error(error);
             const thinkElem = document.getElementById(thinkingId);
@@ -1346,6 +1369,63 @@
             addMessage("网络开小差了，请稍后再试～ 🌱", false);
             return "网络开小差了，请稍后再试～ 🌱";
         }
+    }
+    function renderCard(cardData) {
+        // 尝试解析 data 字段（可能为字符串）
+        let cardContent = null;
+        try {
+            if (typeof cardData.data === 'string') {
+                cardContent = JSON.parse(cardData.data);
+            } else if (cardData.data) {
+                cardContent = cardData.data;
+            } else {
+                // 也可能整个 cardData 就是卡片内容
+                cardContent = cardData;
+            }
+        } catch (e) {
+            console.error("解析卡片数据失败", e);
+            addMessage("卡片内容无法加载，请稍后再试", false);
+            return;
+        }
+
+        // 提取卡片中的变量 (根据你提供的示例数据结构)
+        const variables = cardContent.variables || {};
+        const title = variables.SKvAQyA1Ba?.defaultValue || "步骤说明";
+        const applyTo = variables.zID1pVupPe?.defaultValue || "适用人群";
+        let steps = variables.kMmCuHVDAs?.defaultValue || "";
+        const tips = variables.fC20z6AJvt?.defaultValue || "";
+        const imgUrl = variables.ShAK2VMqCS || "";
+
+        // 如果 steps 是 JSON 字符串，可能需要进一步解析（这里假设是文本，每行一个步骤）
+        let stepsArray = [];
+        if (typeof steps === 'string' && steps.includes('\n')) {
+            stepsArray = steps.split('\n').filter(s => s.trim());
+        } else if (typeof steps === 'string') {
+            stepsArray = [steps];
+        } else if (Array.isArray(steps)) {
+            stepsArray = steps;
+        }
+
+        // 构建卡片 HTML
+        let html = `<div style="background: #fff9f0; border-radius: 24px; padding: 16px; border: 1px solid #f0e0c0; max-width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">`;
+        if (title) html += `<h4 style="color: #b47c44; margin-bottom: 12px; font-size: 1.2rem;">📋 ${escapeHtml(title)}</h4>`;
+        if (applyTo) html += `<p style="color: #8e6a41; font-size: 0.85rem; margin-bottom: 12px;"><strong>👥 适用人群：</strong>${escapeHtml(applyTo)}</p>`;
+        if (stepsArray.length) {
+            html += `<ol style="margin: 12px 0; padding-left: 20px;">`;
+            stepsArray.forEach(step => {
+                html += `<li style="margin-bottom: 8px; color: #5e4b36;">${escapeHtml(step)}</li>`;
+            });
+            html += `</ol>`;
+        }
+        if (tips) html += `<div style="background: #feece4; border-radius: 16px; padding: 10px; margin-top: 8px;"><strong>💡 小贴士：</strong> ${escapeHtml(tips)}</div>`;
+        html += `</div>`;
+
+        // 将卡片添加到聊天区
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'message bot';
+        msgDiv.innerHTML = `<div class="bubble">${html}</div>`;
+        chatMessagesDiv.appendChild(msgDiv);
+        chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
     }
     async function sendMessage() {
         const msg = userInput.value.trim();
