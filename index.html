@@ -1382,7 +1382,7 @@
         });
     }
     function renderCard(cardData) {
-        // 尝试解析 data 字段（可能为字符串）
+        // 1. 解析 data 字段
         let cardContent = null;
         try {
             if (typeof cardData.data === 'string') {
@@ -1390,7 +1390,6 @@
             } else if (cardData.data) {
                 cardContent = cardData.data;
             } else {
-                // 也可能整个 cardData 就是卡片内容
                 cardContent = cardData;
             }
         } catch (e) {
@@ -1399,25 +1398,41 @@
             return;
         }
 
-        // 提取卡片中的变量 (根据你提供的示例数据结构)
+        // 2. 获取变量定义对象
         const variables = cardContent.variables || {};
-        const title = variables.SKvAQyA1Ba?.defaultValue || "步骤说明";
-        const applyTo = variables.zID1pVupPe?.defaultValue || "适用人群";
-        let steps = variables.kMmCuHVDAs?.defaultValue || "";
-        const tips = variables.fC20z6AJvt?.defaultValue || "";
-        const imgUrl = variables.ShAK2VMqCS || "";
+        
+        // 辅助函数：提取变量实际值（优先 value，其次 defaultValue）
+        function getVarValue(varObj) {
+            if (!varObj) return '';
+            if (varObj.value !== undefined && varObj.value !== null && varObj.value !== '') {
+                return varObj.value;
+            }
+            if (varObj.defaultValue !== undefined && varObj.defaultValue !== null && varObj.defaultValue !== '') {
+                return varObj.defaultValue;
+            }
+            return '';
+        }
 
-        // 如果 steps 是 JSON 字符串，可能需要进一步解析（这里假设是文本，每行一个步骤）
+        // 3. 提取各个字段（注意变量名与您卡片中的 ID 完全一致）
+        const title = getVarValue(variables.SKvAQyA1Ba) || "步骤说明";
+        const applyTo = getVarValue(variables.zID1pVupPe) || "适用人群";
+        let steps = getVarValue(variables.kMmCuHVDAs) || "";
+        const tips = getVarValue(variables.fC20z6AJvt) || "";
+        const imgUrl = getVarValue(variables.ShAK2VMqCS) || "";
+
+        // 4. 处理 steps（支持换行分隔）
         let stepsArray = [];
-        if (typeof steps === 'string' && steps.includes('\n')) {
-            stepsArray = steps.split('\n').filter(s => s.trim());
-        } else if (typeof steps === 'string') {
-            stepsArray = [steps];
+        if (typeof steps === 'string') {
+            if (steps.includes('\n')) {
+                stepsArray = steps.split('\n').filter(s => s.trim());
+            } else if (steps.trim()) {
+                stepsArray = [steps.trim()];
+            }
         } else if (Array.isArray(steps)) {
             stepsArray = steps;
         }
 
-        // 构建卡片 HTML
+        // 5. 构建 HTML 卡片（美观且安全）
         let html = `<div style="background: #fff9f0; border-radius: 24px; padding: 16px; border: 1px solid #f0e0c0; max-width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">`;
         if (title) html += `<h4 style="color: #b47c44; margin-bottom: 12px; font-size: 1.2rem;">📋 ${escapeHtml(title)}</h4>`;
         if (applyTo) html += `<p style="color: #8e6a41; font-size: 0.85rem; margin-bottom: 12px;"><strong>👥 适用人群：</strong>${escapeHtml(applyTo)}</p>`;
@@ -1429,9 +1444,13 @@
             html += `</ol>`;
         }
         if (tips) html += `<div style="background: #feece4; border-radius: 16px; padding: 10px; margin-top: 8px;"><strong>💡 小贴士：</strong> ${escapeHtml(tips)}</div>`;
+        // 如果有图片 URL，显示图片
+        if (imgUrl && imgUrl.trim() !== '' && (imgUrl.startsWith('http://') || imgUrl.startsWith('https://'))) {
+            html += `<div style="margin-top: 12px;"><img src="${escapeHtml(imgUrl)}" alt="卡片配图" style="max-width: 100%; border-radius: 12px;"></div>`;
+        }
         html += `</div>`;
 
-        // 将卡片添加到聊天区
+        // 6. 添加到聊天区
         const msgDiv = document.createElement('div');
         msgDiv.className = 'message bot';
         msgDiv.innerHTML = `<div class="bubble">${html}</div>`;
