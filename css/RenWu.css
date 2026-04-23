@@ -1,0 +1,117 @@
+<style>
+    /* 主要修改部分 */
+    .sigma_team-slider {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+    .sigma_team.style-11 {
+        flex: 1 1 calc(20% - 16px);
+        display: flex;
+        flex-direction: column;
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        transition: transform 0.3s ease;
+    }
+    .sigma_team.style-11:hover {
+        transform: translateY(-5px);
+    }
+    .sigma_team-thumb {
+        position: relative;
+        padding-top: 100%;
+        overflow: hidden;
+    }
+    .team-image {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .sigma_team-body {
+        display: flex;
+        flex-direction: column;
+        padding: 15px 0; /* 仅保留上下内边距，左右与图片对齐 */
+        flex: 1;
+    }
+    .sigma_team-body h5,
+    .sigma_team-categories {
+        padding: 0 15px; /* 为标题和内容添加内边距 */
+    }
+    .sigma_team-body h5 {
+        margin-bottom: 10px;
+        font-size: 18px;
+        font-weight: 600;
+    }
+    .sigma_team-categories {
+        height: 180px;
+        overflow-y: auto;
+        padding-right: 15px; /* 为滚动条留出空间 */
+    }
+    .sigma_team-category {
+        display: block;
+        color: #666;
+        line-height: 1.6;
+    }
+    
+    /* 自定义滚动条样式 */
+    .sigma_team-categories::-webkit-scrollbar {
+        width: 4px;
+    }
+    .sigma_team-categories::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    .sigma_team-categories::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 10px;
+    }
+    .sigma_team-categories::-webkit-scrollbar-thumb:hover {
+        background: #aaa;
+    }
+    
+    /* 响应式调整 */
+    @media (max-width: 1200px) {
+        .sigma_team.style-11 {
+            flex: 1 1 calc(25% - 15px);
+        }
+    }
+    @media (max-width: 992px) {
+        .sigma_team.style-11 {
+            flex: 1 1 calc(33.333% - 13.33px);
+        }
+        .sigma_team-categories {
+            height: 150px;
+        }
+    }
+    @media (max-width: 768px) {
+        .sigma_team.style-11 {
+            flex: 1 1 calc(50% - 10px);
+        }
+    }
+    @media (max-width: 576px) {
+        .sigma_team.style-11 {
+            flex: 1 1 100%;
+        }
+    }
+	
+	.sigma_team.style-11 {
+	    flex: 1 1 calc(25% - 15px); /* 改为25%，一行显示4个卡片 */
+	    /* 其他样式保持不变 */
+	}
+	/* 相应调整媒体查询 */
+	@media (max-width: 992px) {
+	    .sigma_team.style-11 {
+	        flex: 1 1 calc(50% - 10px); /* 中等屏幕显示2个 */
+	    }
+	}
+	
+	
+	
+	
+	  
+	
+</style>
