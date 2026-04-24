@@ -1461,10 +1461,17 @@
                             // 检测卡片数据：有两种可能的格式
                             // 1. eventData.type === "card" 且 eventData.data
                             // 2. eventData.card_type !== undefined
+                            // 检测卡片数据的多种可能
                             if (eventData.type === "card" && eventData.data) {
                                 cardData = eventData;
                             } else if (eventData.card_type !== undefined) {
                                 cardData = eventData;
+                            } else if (eventData.content_type === "card" && eventData.content) {
+                                // 有些卡片会放在 content 字段里
+                                try {
+                                    const cardObj = JSON.parse(eventData.content);
+                                    if (cardObj.card_type !== undefined) cardData = cardObj;
+                                } catch(e) {}
                             }
                         } catch (e) {}
                     }
