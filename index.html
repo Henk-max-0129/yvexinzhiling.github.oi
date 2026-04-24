@@ -1315,29 +1315,60 @@
             return;
         }
 
-        // 2. 获取变量定义对象
         const variables = cardContent.variables || {};
-        
-        // 辅助函数：提取变量实际值（优先 value，其次 defaultValue）
+
+        // 辅助函数：提取变量的最终值（字符串或图片 URL）
         function getVarValue(varObj) {
             if (!varObj) return '';
+            // 1. 优先取 value 字段（通常是最终值）
             if (varObj.value !== undefined && varObj.value !== null && varObj.value !== '') {
-                return varObj.value;
+                // 如果 value 本身是对象，且包含图片数组
+                if (typeof varObj.value === 'object') {
+                    return extractImageUrl(varObj.value);
+                }
+                return String(varObj.value);
             }
+            // 2. 其次取 defaultValue
             if (varObj.defaultValue !== undefined && varObj.defaultValue !== null && varObj.defaultValue !== '') {
-                return varObj.defaultValue;
+                // 如果 defaultValue 是对象（例如图片结构）
+                if (typeof varObj.defaultValue === 'object') {
+                    return extractImageUrl(varObj.defaultValue);
+                }
+                return String(varObj.defaultValue);
             }
             return '';
         }
 
-        // 3. 提取各个字段（注意变量名与您卡片中的 ID 完全一致）
+        // 专门从对象中提取图片 URL
+        function extractImageUrl(obj) {
+            if (!obj || typeof obj !== 'object') return '';
+            // 情况1：obj.data.image_urls 数组
+            if (obj.data && Array.isArray(obj.data.image_urls) && obj.data.image_urls.length > 0) {
+                return obj.data.image_urls[0];
+            }
+            // 情况2：obj.image_urls 数组
+            if (Array.isArray(obj.image_urls) && obj.image_urls.length > 0) {
+                return obj.image_urls[0];
+            }
+            // 情况3：obj.url 字符串
+            if (typeof obj.url === 'string' && obj.url.startsWith('http')) {
+                return obj.url;
+            }
+            // 情况4：直接就是字符串 URL
+            if (typeof obj === 'string' && obj.startsWith('http')) {
+                return obj;
+            }
+            return '';
+        }
+
+        // 提取各个字段
         const title = getVarValue(variables.SKvAQyA1Ba) || "步骤说明";
         const applyTo = getVarValue(variables.zID1pVupPe) || "适用人群";
         let steps = getVarValue(variables.kMmCuHVDAs) || "";
         const tips = getVarValue(variables.fC20z6AJvt) || "";
         const imgUrl = getVarValue(variables.ShAK2VMqCS) || "";
 
-        // 4. 处理 steps（支持换行分隔）
+        // 处理 steps（支持换行分隔）
         let stepsArray = [];
         if (typeof steps === 'string') {
             if (steps.includes('\n')) {
@@ -1349,7 +1380,7 @@
             stepsArray = steps;
         }
 
-        // 5. 构建 HTML 卡片（美观且安全）
+        // 构建 HTML 卡片
         let html = `<div style="background: #fff9f0; border-radius: 24px; padding: 16px; border: 1px solid #f0e0c0; max-width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">`;
         if (title) html += `<h4 style="color: #b47c44; margin-bottom: 12px; font-size: 1.2rem;">📋 ${escapeHtml(title)}</h4>`;
         if (applyTo) html += `<p style="color: #8e6a41; font-size: 0.85rem; margin-bottom: 12px;"><strong>👥 适用人群：</strong>${escapeHtml(applyTo)}</p>`;
@@ -1361,13 +1392,13 @@
             html += `</ol>`;
         }
         if (tips) html += `<div style="background: #feece4; border-radius: 16px; padding: 10px; margin-top: 8px;"><strong>💡 小贴士：</strong> ${escapeHtml(tips)}</div>`;
-        // 如果有图片 URL，显示图片
+        // 显示图片（如果有）
         if (imgUrl && imgUrl.trim() !== '' && (imgUrl.startsWith('http://') || imgUrl.startsWith('https://'))) {
             html += `<div style="margin-top: 12px;"><img src="${escapeHtml(imgUrl)}" alt="卡片配图" style="max-width: 100%; border-radius: 12px;"></div>`;
         }
         html += `</div>`;
 
-        // 6. 添加到聊天区
+        // 添加到聊天区
         const msgDiv = document.createElement('div');
         msgDiv.className = 'message bot';
         msgDiv.innerHTML = `<div class="bubble">${html}</div>`;
