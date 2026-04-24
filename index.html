@@ -1298,89 +1298,6 @@
     }
     const BOT_ID = "7627136285853581363";
     const API_KEY = "pat_DX6jLqajggG6zOmbpoOJ9KMH0iDGi6kSAvD3s3jX9wQgyyk0eMUYSuzJwHSDPDwp";
-    async function callCozeBot(userMessage, thinkingId) {
-        const userId = "web_user_" + Date.now();
-        try {
-            const response = await fetch("https://api.coze.cn/v3/chat", {
-                method: "POST",
-                headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
-                body: JSON.stringify({ bot_id: BOT_ID, user_id: userId, stream: true, auto_save_history: true, additional_messages: [{ role: "user", content: userMessage, content_type: "text" }] })
-            });
-            if (!response.ok || !response.body) throw new Error(`请求失败，状态码：${response.status}`);
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let fullReply = "", buffer = "";
-            let cardData = null;  // 新增：存储卡片数据
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n');
-                buffer = lines.pop() || "";
-                for (const line of lines) {
-                    const trimmed = line.trim();
-                    if (trimmed.startsWith('data:')) {
-                        const jsonStr = trimmed.substring(5).trim();
-                        if (jsonStr === '[DONE]') continue;
-                        try {
-                            const eventData = JSON.parse(jsonStr);
-                            if (eventData.type === "answer" && eventData.content) {
-                                fullReply = eventData.content;
-                            }
-                            // 检测卡片数据：有两种可能的格式
-                            // 1. eventData.type === "card" 且 eventData.data
-                            // 2. eventData.card_type !== undefined
-                            if (eventData.type === "card" && eventData.data) {
-                                cardData = eventData;
-                            } else if (eventData.card_type !== undefined) {
-                                cardData = eventData;
-                            }
-                        } catch (e) {}
-                    }
-                }
-            }
-
-            // 移除“思考”气泡
-            const thinkElem = document.getElementById(thinkingId);
-            if (thinkElem) thinkElem.remove();
-
-            // 清洗 Markdown 函数（保持原样）
-            function cleanMarkdown(text) {
-                if (!text) return text;
-                return text.replace(/^>\s*/gm, '').replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1').replace(/`(.*?)`/g, '$1').replace(/\n{3,}/g, '\n\n').trim();
-            }
-
-            // 【核心改动】如果有卡片数据，渲染卡片；否则显示普通文本
-            if (cardData) {
-                renderCard(cardData);
-            } else if (fullReply) {
-                const cleanedReply = cleanMarkdown(fullReply);
-                const parsedReply = parseMarkdownImages(cleanedReply);
-                addMessage(parsedReply, false);
-            } else {
-                addMessage("小暖暂时无法回答，请稍后再试～", false);
-            }
-            chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
-            return fullReply;
-        } catch (error) {
-            console.error(error);
-            const thinkElem = document.getElementById(thinkingId);
-            if (thinkElem) thinkElem.remove();
-            addMessage("网络开小差了，请稍后再试～ 🌱", false);
-            return "网络开小差了，请稍后再试～ 🌱";
-        }
-    }
-    function parseMarkdownImages(text) {
-        if (!text) return text;
-        // 匹配 Markdown 图片语法: ![alt](url)
-        return text.replace(/!\[(.*?)\]\((.*?)\)/g, function(match, alt, url) {
-            // 安全处理 URL，防止 XSS
-            const safeUrl = url.replace(/[<>]/g, '');
-            const safeAlt = alt.replace(/[<>]/g, '');
-            return `<img src="${safeUrl}" alt="${safeAlt}" style="max-width: 100%; border-radius: 12px; margin: 8px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">`;
-        });
-    }
     function renderCard(cardData) {
         // 1. 解析 data 字段
         let cardContent = null;
@@ -1480,6 +1397,90 @@
             addMessage("网络开小差了，请稍后再试～ 🌱", false);
         }
     }
+    async function callCozeBot(userMessage, thinkingId) {
+        const userId = "web_user_" + Date.now();
+        try {
+            const response = await fetch("https://api.coze.cn/v3/chat", {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
+                body: JSON.stringify({ bot_id: BOT_ID, user_id: userId, stream: true, auto_save_history: true, additional_messages: [{ role: "user", content: userMessage, content_type: "text" }] })
+            });
+            if (!response.ok || !response.body) throw new Error(`请求失败，状态码：${response.status}`);
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let fullReply = "", buffer = "";
+            let cardData = null;  // 新增：存储卡片数据
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || "";
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (trimmed.startsWith('data:')) {
+                        const jsonStr = trimmed.substring(5).trim();
+                        if (jsonStr === '[DONE]') continue;
+                        try {
+                            const eventData = JSON.parse(jsonStr);
+                            if (eventData.type === "answer" && eventData.content) {
+                                fullReply = eventData.content;
+                            }
+                            // 检测卡片数据：有两种可能的格式
+                            // 1. eventData.type === "card" 且 eventData.data
+                            // 2. eventData.card_type !== undefined
+                            if (eventData.type === "card" && eventData.data) {
+                                cardData = eventData;
+                            } else if (eventData.card_type !== undefined) {
+                                cardData = eventData;
+                            }
+                        } catch (e) {}
+                    }
+                }
+            }
+
+            // 移除“思考”气泡
+            const thinkElem = document.getElementById(thinkingId);
+            if (thinkElem) thinkElem.remove();
+
+            // 清洗 Markdown 函数（保持原样）
+            function cleanMarkdown(text) {
+                if (!text) return text;
+                return text.replace(/^>\s*/gm, '').replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1').replace(/`(.*?)`/g, '$1').replace(/\n{3,}/g, '\n\n').trim();
+            }
+
+            // 【核心改动】如果有卡片数据，渲染卡片；否则显示普通文本
+            if (cardData) {
+                renderCard(cardData);
+            } else if (fullReply) {
+                const cleanedReply = cleanMarkdown(fullReply);
+                const parsedReply = parseMarkdownImages(cleanedReply);
+                addMessage(parsedReply, false);
+            } else {
+                addMessage("小暖暂时无法回答，请稍后再试～", false);
+            }
+            chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+            return fullReply;
+        } catch (error) {
+            console.error(error);
+            const thinkElem = document.getElementById(thinkingId);
+            if (thinkElem) thinkElem.remove();
+            addMessage("网络开小差了，请稍后再试～ 🌱", false);
+            return "网络开小差了，请稍后再试～ 🌱";
+        }
+    }
+    function parseMarkdownImages(text) {
+        if (!text) return text;
+        // 匹配 Markdown 图片语法: ![alt](url)
+        return text.replace(/!\[(.*?)\]\((.*?)\)/g, function(match, alt, url) {
+            // 安全处理 URL，防止 XSS
+            const safeUrl = url.replace(/[<>]/g, '');
+            const safeAlt = alt.replace(/[<>]/g, '');
+            return `<img src="${safeUrl}" alt="${safeAlt}" style="max-width: 100%; border-radius: 12px; margin: 8px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">`;
+        });
+    }
+
     if (sendBtn) sendBtn.addEventListener('click', sendMessage);
     if (userInput) userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
 
